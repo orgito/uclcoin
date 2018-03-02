@@ -19,8 +19,8 @@ Code heavily borrowed from Cranky Coin
 Installation
 ------------
 
-UCLCoin is distributed on PyPI and supports Python 3.6+.
+UCLCoin is distributed on PyPI and is available on Linux/macOS and Windows and supports Python 3.6+.
 
 .. code-block:: bash
 
-    $ pip install uclcoin
+    $ pip install -U uclcoin
