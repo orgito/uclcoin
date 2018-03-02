@@ -116,7 +116,7 @@ Agora você pode gastar suas moedas.
 .. code-block:: python
 
    >>> destinatario = '02ff420a5768ca5a97f0eedc2400e72bf1d084ed0c075e90a33f10a8d50d94071d'
-   >>> gasto = cliente.create_transaction(destinatario)
+   >>> gasto = cliente.create_transaction(destinatario, 2)
    >>> blockchain.add_transaction(gasto)
    True
 
