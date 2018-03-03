@@ -12,7 +12,7 @@ from uclcoin.transaction import Transaction
 class BlockChain(object):
     COINS_PER_BLOCK = 10
     MAX_TRANSACTIONS_PER_BLOCK = 50
-    MINIMUM_HASH_DIFFICULTY = 6
+    MINIMUM_HASH_DIFFICULTY = 7
 
     def __init__(self, blocks=None):
         self.blocks = []
@@ -214,5 +214,5 @@ class BlockChain(object):
             ''
         )
         genesis_transactions = [genesis_transaction_one, genesis_transaction_two]
-        genesis_block = Block(0, genesis_transactions, '000000000000000000000000000000000000000000000000000000000000000000', 0, 27118821)
+        genesis_block = Block(0, genesis_transactions, '000000000000000000000000000000000000000000000000000000000000000000', 0, 130898395)
         return genesis_block
