@@ -145,6 +145,9 @@ class BlockChain(object):
             return False
         return True
 
+    def add_transaction(self, transaction):
+        return self.push_pending_transaction(transaction)
+
     def push_pending_transaction(self, transaction):
         if self.validate_transaction(transaction):
             self.pending_transactions.append(transaction)
@@ -197,7 +200,7 @@ class BlockChain(object):
         genesis_transaction_one = Transaction(
             '0',
             '032b72046d335b5318a672763338b08b9642225189ab3f0cba777622cfee0fc07b',
-            500000,
+            10,
             0,
             0,
             ''
@@ -205,11 +208,11 @@ class BlockChain(object):
         genesis_transaction_two = Transaction(
             '0',
             '02f846677f65911f140a42af8fe7c1e5cbc7d148c44057ce49ee0cd0a72b21df4f',
-            500000,
+            10,
             0,
             0,
             ''
         )
         genesis_transactions = [genesis_transaction_one, genesis_transaction_two]
-        genesis_block = Block(0, genesis_transactions, '000000000000000000000000000000000000000000000000000000000000000000', 0, 96741)
+        genesis_block = Block(0, genesis_transactions, '000000000000000000000000000000000000000000000000000000000000000000', 0, 27118821)
         return genesis_block

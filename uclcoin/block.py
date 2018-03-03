@@ -22,7 +22,6 @@ class Block(object):
 
     def recalculate_hash(self):
         self.current_hash = self.calc_current_hash()
-        return self.current_hash
 
     @property
     def hash_difficulty(self):
