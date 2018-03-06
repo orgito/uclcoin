@@ -43,7 +43,7 @@ class Block(object):
         )
         block.merkle_root = block_dict['merkle_root']
         block.current_hash = block_dict['current_hash']
-        block.timestamp = block_dict['timestap']
+        block.timestamp = block_dict['timestamp']
         return block
 
     def _to_hashable(self):
