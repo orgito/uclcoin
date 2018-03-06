@@ -16,8 +16,5 @@ class InvalidTransactions(BlockchainException):
 class GenesisBlockMismatch(BlockchainException):
     pass
 
-class InvalidTransactionHash(Exception):
-    pass
-
 class InvalidCoinbaseTransaction(BlockchainException):
     pass
