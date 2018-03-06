@@ -1,11 +1,12 @@
+import os
+import pickle
 import time
+
 import coincurve
 
 from uclcoin import logger
 from uclcoin.block import Block
-from uclcoin.exceptions import (BlockchainException, ChainContinuityError,
-                         GenesisBlockMismatch, InvalidHash,
-                         InvalidTransactions)
+from uclcoin.exceptions import *
 from uclcoin.transaction import Transaction
 
 
@@ -17,6 +18,7 @@ class BlockChain(object):
     def __init__(self, blocks=None):
         self.blocks = []
         self.pending_transactions = []
+
         if not blocks:
             genesis_block = self._get_genesis_block()
             self.add_block(genesis_block)
@@ -24,11 +26,36 @@ class BlockChain(object):
             for block in blocks:
                 self.add_block(block)
 
+    def load_from_file(self, filename):
+        if os.stat(filename).st_size > 0:
+            with open(filename, 'rb') as chain_file:
+                bc = pickle.load(chain_file)
+                self.blocks = []
+                self.pending_transactions = []
+                for b in bc['chain']:
+                    b = Block.from_dict(b)
+                    self.add_block(b)
+                for t in bc['pending']:
+                    t = Transaction.from_dict(t)
+                    self.add_transaction(t)
+        else:
+            genesis_block = self._get_genesis_block()
+            self.add_block(genesis_block)
+
+    def save_to_file(self, filename):
+        bc = {
+            'pending': [dict(t) for t in self.pending_transactions],
+            'chain': [dict(b) for b in self.blocks]
+        }
+        with open(filename, 'wb') as chain_file:
+            pickle.dump(bc, chain_file)
+
     def add_block(self, block):
-        if self.validate_block(block):
-            self.blocks.append(block)
-            return True
-        return False
+        self.validate_block(block)
+        for t in block.transactions[:-1]:
+            self.remove_pending_transaction(t.tx_hash)
+        self.blocks.append(block)
+        return
 
     def calculate_hash_dificulty(self, index=None):
         return self.MINIMUM_HASH_DIFFICULTY
@@ -91,12 +118,12 @@ class BlockChain(object):
         timestamp = int(time.time())
 
         reward_transaction = Transaction(
-            "0",
+            '0',
             reward_address,
             self.get_reward(new_block_id) + fees,
             0,
             timestamp,
-            "0"
+            '0'
         )
         transactions.append(reward_transaction)
 
@@ -113,46 +140,37 @@ class BlockChain(object):
         return False
 
     def validate_block(self, block):
-        try:
-            # if genesis block, check if block is correct
-            if block.index == 0:
-                self._check_genesis_block(block)
-                return True
-            # current hash of data is correct and hash satisfies pattern
-            self._check_hash_and_hash_pattern(block)
-            # block index is correct and previous hash is correct
-            self._check_index_and_previous_hash(block)
-            # block reward is correct based on block index and halving formula
-            self._check_transactions_and_block_reward(block)
-        except BlockchainException as bce:
-            logger.warning(f'Validation Error (block id: {bce.index}): {bce}')
-            return False
-        return True
+        # if genesis block, check if block is correct
+        if block.index == 0:
+            self._check_genesis_block(block)
+            return
+        # current hash of data is correct and hash satisfies pattern
+        self._check_hash_and_hash_pattern(block)
+        # block index is correct and previous hash is correct
+        self._check_index_and_previous_hash(block)
+        # block reward is correct based on block index and halving formula
+        self._check_transactions_and_block_reward(block)
+        return
 
     def validate_transaction(self, transaction):
+        index = len(self.blocks)
         if transaction in self.pending_transactions:
-            logger.warn(f'Transaction not valid.  Duplicate transaction detected: {transaction.tx_hash}')
-            return False
+            raise InvalidTransactions(index, f'Transaction not valid.  Duplicate transaction detected: {transaction.tx_hash}')
         if self.find_duplicate_transactions(transaction.tx_hash):
-            logger.warn(f'Transaction not valid.  Replay transaction detected: {transaction.tx_hash}')
-            return False
+            raise InvalidTransactions(index, f'Transaction not valid.  Replay transaction detected: {transaction.tx_hash}')
         if not transaction.verify():
-            logger.warn(f'Transaction not valid.  Invalid transaction signature: {transaction.tx_hash}')
-            return False
+            raise InvalidTransactions(index, f'Transaction not valid.  Invalid transaction signature: {transaction.tx_hash}')
+        if not transaction.verify_hash():
+            raise InvalidTransactions(index, f'Transaction not valid.  Invalid hash: {transaction.tx_hash}')
         balance = self.get_balance(transaction.source)
         if transaction.amount + transaction.fee > balance:
-            logger.warn(f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
-            return False
-        return True
+            raise InvalidTransactions(index, f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
+        return
 
     def add_transaction(self, transaction):
-        return self.push_pending_transaction(transaction)
-
-    def push_pending_transaction(self, transaction):
-        if self.validate_transaction(transaction):
-            self.pending_transactions.append(transaction)
-            return True
-        return False
+        self.validate_transaction(transaction)
+        self.pending_transactions.append(transaction)
+        return True
 
     def _check_genesis_block(self, block):
         if block != self._get_genesis_block():
@@ -161,6 +179,10 @@ class BlockChain(object):
 
     def _check_hash_and_hash_pattern(self, block):
         hash_difficulty = self.calculate_hash_dificulty()
+        if block.current_hash != block.calc_current_hash():
+            raise InvalidHash(block.index, f'Incompatible Block Hash: {block.current_hash}')
+        if block.merkle_root != block.calc_merkle_root():
+            raise BlockchainException(block.index, f'Incompatible Block merkle root: {block.merkle_root}')
         if block.current_hash[:hash_difficulty].count('0') < hash_difficulty:
             raise InvalidHash(block.index, f'Incompatible Block Hash: {block.current_hash}')
         return
@@ -168,9 +190,9 @@ class BlockChain(object):
     def _check_index_and_previous_hash(self, block):
         latest_block = self.get_latest_block()
         if latest_block.index != block.index - 1:
-            raise ChainContinuityError(block.index, f'Incompatible block index: {block.index-1}')
+            raise ChainContinuityError(block.index, f'Incompatible block index: {block.index}')
         if latest_block.current_hash != block.previous_hash:
-            raise ChainContinuityError(block.index, f'Incompatible block hash: {block.index-1} and hash: {block.previous_hash}')
+            raise ChainContinuityError(block.index, f'Incompatible block hash: {block.index} and hash: {block.previous_hash}')
         return
 
     def _check_transactions_and_block_reward(self, block):
@@ -178,9 +200,9 @@ class BlockChain(object):
         payers = dict()
         for transaction in block.transactions[:-1]:
             if self.find_duplicate_transactions(transaction.tx_hash):
-                raise InvalidTransactions(block.index, "Transactions not valid.  Duplicate transaction detected")
+                raise InvalidTransactions(block.index, 'Transactions not valid.  Duplicate transaction detected')
             if not transaction.verify():
-                raise InvalidTransactions(block.index, "Transactions not valid.  Invalid Transaction signature")
+                raise InvalidTransactions(block.index, 'Transactions not valid.  Invalid Transaction signature')
             if transaction.source in payers:
                 payers[transaction.source] += transaction.amount  + transaction.fee
             else:
@@ -189,11 +211,11 @@ class BlockChain(object):
         for key in payers:
             balance = self.get_balance(key)
             if payers[key] > balance:
-                raise InvalidTransactions(block.index, "Transactions not valid.  Insufficient funds")
+                raise InvalidTransactions(block.index, 'Transactions not valid.  Insufficient funds')
         # last transaction is block reward
         reward_transaction = block.transactions[-1]
-        if reward_transaction.amount != reward_amount or reward_transaction.source != "0":
-            raise InvalidTransactions(block.index, "Transactions not valid.  Incorrect block reward")
+        if reward_transaction.amount != reward_amount or reward_transaction.source != '0':
+            raise InvalidCoinbaseTransaction(block.index, 'Transactions not valid.  Incorrect block reward')
         return
 
     def _get_genesis_block(self):
