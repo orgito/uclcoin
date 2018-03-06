@@ -14,7 +14,7 @@ class Transaction(object):
         self.tx_hash = None
         self.signature = signature
         if signature is not None:
-            self.tx_hash = self._calc_hash()
+            self.tx_hash = self.calc_hash()
 
     @staticmethod
     def from_dict(transaction_dict):
@@ -33,13 +33,16 @@ class Transaction(object):
     def sign(self, private_key):
         private_key = coincurve.PrivateKey.from_hex(private_key)
         self.signature = private_key.sign(self._signable()).hex()
-        self.tx_hash = self._calc_hash()
+        self.tx_hash = self.calc_hash()
         return self.signature
 
     def verify(self):
         return coincurve.verify_signature(bytes.fromhex(self.signature), self._signable(), bytes.fromhex(self.source))
 
-    def _calc_hash(self):
+    def verify_hash(self):
+        return self.tx_hash == self.calc_hash()
+
+    def calc_hash(self):
         data = self.__dict__.copy()
         del data['tx_hash']
         data_json = json.dumps(data, sort_keys=True).encode()
