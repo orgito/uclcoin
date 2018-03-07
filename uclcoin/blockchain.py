@@ -142,6 +142,8 @@ class BlockChain(object):
     def validate_block(self, block):
         # if genesis block, check if block is correct
         if block.index == 0:
+            if len(self.blocks) > 0:
+                raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block.index}')
             self._check_genesis_block(block)
             return
         # current hash of data is correct and hash satisfies pattern
@@ -174,7 +176,7 @@ class BlockChain(object):
 
     def _check_genesis_block(self, block):
         if block != self._get_genesis_block():
-            raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block}')
+            raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block.index}')
         return
 
     def _check_hash_and_hash_pattern(self, block):
