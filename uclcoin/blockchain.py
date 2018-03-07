@@ -177,7 +177,7 @@ class BlockChain(object):
         return
 
     def _check_hash_and_hash_pattern(self, block):
-        hash_difficulty = self.calculate_hash_dificulty()
+        hash_difficulty = self.calculate_hash_difficulty()
         if block.current_hash != block.calc_current_hash():
             raise InvalidHash(block.index, f'Incompatible Block Hash: {block.current_hash}')
         if block.merkle_root != block.calc_merkle_root():
