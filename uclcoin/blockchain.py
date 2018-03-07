@@ -38,9 +38,6 @@ class BlockChain(object):
                 for t in bc['pending']:
                     t = Transaction.from_dict(t)
                     self.add_transaction(t)
-        else:
-            genesis_block = self._get_genesis_block()
-            self.add_block(genesis_block)
 
     def save_to_file(self, filename):
         bc = {
