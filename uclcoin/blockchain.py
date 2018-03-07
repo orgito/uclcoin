@@ -57,7 +57,7 @@ class BlockChain(object):
         self.blocks.append(block)
         return
 
-    def calculate_hash_dificulty(self, index=None):
+    def calculate_hash_difficulty(self, index=None):
         return self.MINIMUM_HASH_DIFFICULTY
 
     def find_duplicate_transactions(self, transaction_hash):
