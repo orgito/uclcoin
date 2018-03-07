@@ -35,7 +35,7 @@ Gerando suas chaves
 ^^^^^^^^^^^^^^^^^^^
 
 A chave privada é usada para assinar suas transações e a chave pública é o seu endereço
-para receber moedas e recompensas de mineiração.
+para receber moedas e recompensas de mineração.
 
 Você pode gerar um novo par de chaves instanciando a classe ``KeyPair``
 
@@ -69,10 +69,10 @@ transações, mas você não poderá enviar valores com saldo zerado.
     >>> blockchain.get_balance(client.public_key)
     0
 
-Mineirando um bloco
+Minerando um bloco
 ^^^^^^^^^^^^^^^^^^^
 
-Obtenha um bloco a ser mineirado à blockchain.
+Obtenha um bloco a ser minerado à blockchain.
 
 .. code-block:: python
 
@@ -90,7 +90,7 @@ na blockchain. A dificuldade atual pode ser obtida pelo metodo ``calculate_hash_
 
     >>> N = blockchain.calculate_hash_difficulty()
 
-Um método simples para mineirar o bloco é incrementar o nonce até produzir um hash válido
+Um método simples para minerar o bloco é incrementar o nonce até produzir um hash válido
 
 .. code-block:: python
 
@@ -98,7 +98,7 @@ Um método simples para mineirar o bloco é incrementar o nonce até produzir um
     ...     novo_bloco.nonce +=1
     ...     novo_bloco.recalculate_hash()
 
-Esta operação vai bloquear enquanto hash é calculado. Após mineirado submeta o
+Esta operação vai bloquear enquanto hash é calculado. Após minerado submeta o
 novo bloco. Se ele for aceito seu saldo será atualizado.
 
 .. code-block:: python
@@ -121,7 +121,7 @@ Agora você pode gastar suas moedas.
    True
 
 Sua transação agora está pendente. Ela só será confirmada após ser incluída em um bloco
-mineirado.
+minerado.
 
 .. code-block:: python
 
