@@ -13,8 +13,6 @@ UCLCoin
 
 A naive blockchain/cryptocurrency implementation merely for educational purposes.
 
-Code heavily borrowed from Cranky Coin
-
 
 Installation
 ------------

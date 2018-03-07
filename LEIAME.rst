@@ -41,8 +41,8 @@ Você pode gerar um novo par de chaves instanciando a classe ``KeyPair``
 
 .. code-block:: python
 
-    >>> cliente = KeyPair()
-    >>> endereco = cliente.public_key
+    >>> carteira = KeyPair()
+    >>> endereco = carteira.public_key
     >>> endereco
     '03d70f9a58c9bc6d8fdc47f96d6931f14a7abb0d72cd76886ee05047023fd49471'
 
@@ -50,7 +50,7 @@ No futuro instancie a classe KeyPair usando sua chave privada ``client.private_k
 
 .. code-block:: python
 
-    >>> cliente = KeyPair('sua-chave-privada')
+    >>> carteira = KeyPair('sua-chave-privada')
 
 BlockChain
 ^^^^^^^^^^
@@ -76,25 +76,25 @@ Obtenha um bloco a ser mineirado à blockchain.
 
 .. code-block:: python
 
-    >>> novo_bloco = blockchain.get_minable_block(client.public_key)
+    >>> novo_bloco = blockchain.get_minable_block(carteira.public_key)
 
-A blockchain retorna um novo block com um índice igual ao índice do último bloco
-incrementado de 1, contendo as transações pendentes e uma transação coinbase
-(de recompensa) destinada à sua chave publica (client.public_key)
+A blockchain retorna um novo bloco com um índice igual ao índice do último bloco
+incrementado de 1 que conterá as transações pendentes e uma transação coinbase
+(de recompensa) destinada à sua chave publica (carteira.public_key)
 
 A prova de trabalho na UCLCoin consiste em alterar o ``nonce`` do bloco até
 produzir um hash iniciando com N zeros, onde N é a dificuldade configurada
-na blockchain. A dificuldade atual pode ser obtida pelo metodo ``calculate_hash_dificulty``
+na blockchain. A dificuldade atual pode ser obtida pelo metodo ``calculate_hash_difficulty``
 
 .. code-block:: python
 
-    >>> dificuldade = blockchain.calculate_hash_dificulty()
+    >>> N = blockchain.calculate_hash_difficulty()
 
 Um método simples para mineirar o bloco é incrementar o nonce até produzir um hash válido
 
 .. code-block:: python
 
-    >>> while novo_bloco.current_hash[:dificuldade].count('0') < dificuldade:
+    >>> while novo_bloco.current_hash[:N].count('0') < N:
     ...     novo_bloco.nonce +=1
     ...     novo_bloco.recalculate_hash()
 
@@ -105,7 +105,7 @@ novo bloco. Se ele for aceito seu saldo será atualizado.
 
    >>> blockchain.add_block(novo_bloco)
    True
-   >>> blockchain.get_balance(cliente.public_key)
+   >>> blockchain.get_balance(carteira.public_key)
    10
 
 Enviando uma transação
@@ -116,7 +116,7 @@ Agora você pode gastar suas moedas.
 .. code-block:: python
 
    >>> destinatario = '02ff420a5768ca5a97f0eedc2400e72bf1d084ed0c075e90a33f10a8d50d94071d'
-   >>> gasto = cliente.create_transaction(destinatario, 2)
+   >>> gasto = carteira.create_transaction(destinatario, 2)
    >>> blockchain.add_transaction(gasto)
    True
 
@@ -125,12 +125,12 @@ mineirado.
 
 .. code-block:: python
 
-   >>> blockchain.get_balance(cliente.public_key)
+   >>> blockchain.get_balance(carteira.public_key)
    10
 
 Você pode verificar seu saldo incluindo as transações não confirmadas, se desejar.
 
 .. code-block:: python
 
-   >>> blockchain.get_balance_pending(cliente.public_key)
+   >>> blockchain.get_balance_pending(carteira.public_key)
    8
