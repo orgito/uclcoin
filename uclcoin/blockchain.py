@@ -159,6 +159,8 @@ class BlockChain(object):
             raise InvalidTransactions(index, f'Transaction not valid.  Replay transaction detected: {transaction.tx_hash}')
         if not transaction.verify():
             raise InvalidTransactions(index, f'Transaction not valid.  Invalid transaction signature: {transaction.tx_hash}')
+        if transaction.amount <= 0 or transaction.fee < 0:
+            raise InvalidTransactions(index, f'Transaction not valid.  Invalid transaction values: {transaction.tx_hash}')
         if not transaction.verify_hash():
             raise InvalidTransactions(index, f'Transaction not valid.  Invalid hash: {transaction.tx_hash}')
         balance = self.get_balance(transaction.source)
