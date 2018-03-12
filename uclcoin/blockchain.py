@@ -2,9 +2,6 @@ import os
 import pickle
 import time
 
-import coincurve
-
-from uclcoin import logger
 from uclcoin.block import Block
 from uclcoin.exceptions import *
 from uclcoin.transaction import Transaction
@@ -165,6 +162,9 @@ class BlockChain(object):
             raise InvalidTransactions(index, f'Transaction not valid.  Invalid hash: {transaction.tx_hash}')
         balance = self.get_balance(transaction.source)
         if transaction.amount + transaction.fee > balance:
+            raise InvalidTransactions(index, f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
+        balance_pending = self.get_balance_pending(transaction.source)
+        if transaction.amount + transaction.fee > balance_pending:
             raise InvalidTransactions(index, f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
         return
 
