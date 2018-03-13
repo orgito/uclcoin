@@ -25,7 +25,7 @@ UCLCoin é distribuido via PyPI, está disponível para Linux/macOS e Windows e 
 Exemplos
 --------
 
-Nos exemplos abaixo assume-se que a classe apropriada foi previamente importada.
+Nos exemplos abaixo assume-se que as dendencias necessárias foram previamente importadas.
 
 .. code-block:: python
 
@@ -55,7 +55,7 @@ No futuro instancie a classe KeyPair usando sua chave privada ``client.private_k
 BlockChain
 ^^^^^^^^^^
 
-Crie uma BlockChain vazia para realizar seus testes
+Crie uma BlockChain vazia para realizar seus testes:
 
 .. code-block:: python
 
@@ -78,8 +78,7 @@ Obtenha um bloco a ser minerado à blockchain.
 
     >>> novo_bloco = blockchain.get_minable_block(carteira.public_key)
 
-A blockchain retorna um novo bloco com um índice igual ao índice do último bloco
-incrementado de 1 que conterá as transações pendentes e uma transação coinbase
+A blockchain retorna um novo bloco com o próximo índice válido contendo as transações pendentes e uma transação coinbase
 (de recompensa) destinada à sua chave publica (carteira.public_key)
 
 A prova de trabalho na UCLCoin consiste em alterar o ``nonce`` do bloco até
@@ -115,7 +114,7 @@ Agora você pode gastar suas moedas.
 
 .. code-block:: python
 
-   >>> destinatario = '02ff420a5768ca5a97f0eedc2400e72bf1d084ed0c075e90a33f10a8d50d94071d'
+   >>> destinatario = 'chave_publica_do_destinatario'
    >>> gasto = carteira.create_transaction(destinatario, 2)
    >>> blockchain.add_transaction(gasto)
    True
