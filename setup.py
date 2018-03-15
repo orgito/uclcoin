@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='uclcoin',
-    version='0.1.6',
+    version='0.2.0',
     description='UCLCoin: A naive blockchain/cryptocurrency implementation',
     long_description=open('README.rst', 'r').read(),
     author='Renato Orgito',
