@@ -1,8 +1,9 @@
+# pylint: disable=C0111
 from setuptools import setup
 
 setup(
     name='uclcoin',
-    version='0.1.5',
+    version='0.1.6',
     description='UCLCoin: A naive blockchain/cryptocurrency implementation',
     long_description=open('README.rst', 'r').read(),
     author='Renato Orgito',

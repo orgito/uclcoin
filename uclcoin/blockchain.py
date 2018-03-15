@@ -1,15 +1,16 @@
+# pylint: disable=C0103,C0111
 import os
 import pickle
 import time
 
 from uclcoin.block import Block
-from uclcoin.exceptions import *
+from uclcoin.exceptions import *  # pylint: disable=W0401
 from uclcoin.transaction import Transaction
 
 
 class BlockChain(object):
     COINS_PER_BLOCK = 10
-    MAX_TRANSACTIONS_PER_BLOCK = 50
+    MAX_TRANSACTIONS_PER_BLOCK = 200
     MINIMUM_HASH_DIFFICULTY = 7
 
     def __init__(self, blocks=None):
@@ -52,6 +53,10 @@ class BlockChain(object):
         return
 
     def calculate_hash_difficulty(self, index=None):
+        if not index:
+            return self.MINIMUM_HASH_DIFFICULTY + 1
+        if index >= 2000:
+            return self.MINIMUM_HASH_DIFFICULTY + 1
         return self.MINIMUM_HASH_DIFFICULTY
 
     def find_duplicate_transactions(self, transaction_hash):
@@ -123,7 +128,7 @@ class BlockChain(object):
 
         return Block(new_block_id, transactions, previous_hash, timestamp)
 
-    def get_reward(self, index):
+    def get_reward(self, index):  # pylint: disable=W0613
         return self.COINS_PER_BLOCK
 
     def remove_pending_transaction(self, transaction_hash):
@@ -136,7 +141,7 @@ class BlockChain(object):
     def validate_block(self, block):
         # if genesis block, check if block is correct
         if block.index == 0:
-            if len(self.blocks) > 0:
+            if self.blocks:
                 raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block.index}')
             self._check_genesis_block(block)
             return
