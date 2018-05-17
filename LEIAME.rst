@@ -46,7 +46,7 @@ Você pode gerar um novo par de chaves instanciando a classe ``KeyPair``
     >>> endereco
     '03d70f9a58c9bc6d8fdc47f96d6931f14a7abb0d72cd76886ee05047023fd49471'
 
-No futuro instancie a classe KeyPair usando sua chave privada ``client.private_key``.
+No futuro instancie a classe KeyPair usando sua chave privada ``wallet.private_key``.
 
 .. code-block:: python
 
@@ -66,7 +66,7 @@ transações, mas você não poderá enviar valores com saldo zerado.
 
 .. code-block:: python
 
-    >>> blockchain.get_balance(client.public_key)
+    >>> blockchain.get_balance(wallet.public_key)
     0
 
 Minerando um bloco
@@ -76,10 +76,10 @@ Obtenha um bloco a ser minerado à blockchain.
 
 .. code-block:: python
 
-    >>> novo_bloco = blockchain.get_minable_block(carteira.public_key)
+    >>> novo_bloco = blockchain.get_minable_block(wallet.public_key)
 
 A blockchain retorna um novo bloco com o próximo índice válido contendo as transações pendentes e uma transação coinbase
-(de recompensa) destinada à sua chave publica (carteira.public_key)
+(de recompensa) destinada à sua chave publica (wallet.public_key)
 
 A prova de trabalho na UCLCoin consiste em alterar o ``nonce`` do bloco até
 produzir um hash iniciando com N zeros, onde N é a dificuldade configurada
@@ -104,7 +104,7 @@ novo bloco. Se ele for aceito seu saldo será atualizado.
 
    >>> blockchain.add_block(novo_bloco)
    True
-   >>> blockchain.get_balance(carteira.public_key)
+   >>> blockchain.get_balance(wallet.public_key)
    10
 
 Enviando uma transação
@@ -115,7 +115,7 @@ Agora você pode gastar suas moedas.
 .. code-block:: python
 
    >>> destinatario = 'chave_publica_do_destinatario'
-   >>> gasto = carteira.create_transaction(destinatario, 2)
+   >>> gasto = wallet.create_transaction(destinatario, 2)
    >>> blockchain.add_transaction(gasto)
    True
 
@@ -124,12 +124,12 @@ minerado.
 
 .. code-block:: python
 
-   >>> blockchain.get_balance(carteira.public_key)
+   >>> blockchain.get_balance(wallet.public_key)
    10
 
 Você pode verificar seu saldo incluindo as transações não confirmadas, se desejar.
 
 .. code-block:: python
 
-   >>> blockchain.get_balance_pending(carteira.public_key)
+   >>> blockchain.get_balance_pending(wallet.public_key)
    8
