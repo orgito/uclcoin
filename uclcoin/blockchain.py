@@ -57,6 +57,8 @@ class BlockChain(object):
             index = 0
         elif index is None:
             index = self.blocks[-1].index + 1
+        if index > 3330 and index <= 3400:
+            return self.MINIMUM_HASH_DIFFICULTY
         if index >= 2000:
             return self.MINIMUM_HASH_DIFFICULTY + 1
         return self.MINIMUM_HASH_DIFFICULTY
@@ -131,6 +133,8 @@ class BlockChain(object):
         return Block(new_block_id, transactions, previous_hash, timestamp)
 
     def get_reward(self, index):  # pylint: disable=W0613
+        if index > 3330 and index <= 3400:
+            return self.COINS_PER_BLOCK * 0.3
         return self.COINS_PER_BLOCK
 
     def remove_pending_transaction(self, transaction_hash):
