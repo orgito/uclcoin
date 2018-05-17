@@ -47,7 +47,7 @@ Use the ``KeyPair`` class to generate your keys
     >>> address
     '03d70f9a58c9bc6d8fdc47f96d6931f14a7abb0d72cd76886ee05047023fd49471'
 
-To reuse your key pair instantiate the class using your private key ``client.private_key``
+To reuse your key pair instantiate the class using your private key ``wallet.private_key``
 
 .. code-block:: python
 
@@ -67,7 +67,7 @@ transactions, but you can't send any coins if your balance is zero.
 
 .. code-block:: python
 
-    >>> blockchain.get_balance(client.public_key)
+    >>> blockchain.get_balance(wallet.public_key)
     0
 
 Mining a block
