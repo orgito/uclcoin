@@ -1,11 +1,41 @@
 # pylint: disable=C0103,C0111
-import os
-import pickle
 import time
+from typing import Iterator
 
 from uclcoin.block import Block
 from uclcoin.exceptions import *  # pylint: disable=W0401
 from uclcoin.transaction import Transaction
+
+try:
+    from pymongo.database import Database
+    pymongo_not_installed = False
+except ModuleNotFoundError:
+    pymongo_not_installed = True
+
+
+def genesis_block():
+    genesis_transaction_one = Transaction(
+        '0',
+        '032b72046d335b5318a672763338b08b9642225189ab3f0cba777622cfee0fc07b',
+        10,
+        0,
+        0,
+        ''
+    )
+    genesis_transaction_two = Transaction(
+        '0',
+        '02f846677f65911f140a42af8fe7c1e5cbc7d148c44057ce49ee0cd0a72b21df4f',
+        10,
+        0,
+        0,
+        ''
+    )
+    genesis_transactions = [genesis_transaction_one, genesis_transaction_two]
+    return Block(0, genesis_transactions, '000000000000000000000000000000000000000000000000000000000000000000', 0, 130898395)
+
+def check_genesis_block(block):
+    if block != genesis_block():
+        raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block.index}')
 
 
 class BlockChain(object):
@@ -13,50 +43,34 @@ class BlockChain(object):
     MAX_TRANSACTIONS_PER_BLOCK = 200
     MINIMUM_HASH_DIFFICULTY = 7
 
-    def __init__(self, blocks=None):
-        self.blocks = []
-        self.pending_transactions = []
+    def __init__(self, mongodb: Database = None):
+        if pymongo_not_installed and not mongodb is None:
+            raise RuntimeError('Cannot use Mongodb for persistnece without pymongo')
 
-        if not blocks:
-            genesis_block = self._get_genesis_block()
-            self.add_block(genesis_block)
+        if isinstance(mongodb, Database):
+            self.mongo = True
+            self._blocks = mongodb.blocks
+            self._pending_transactions = mongodb.pending_transactions
         else:
-            for block in blocks:
-                self.add_block(block)
+            self.mongo = False
+            self._blocks = []
+            self._pending_transactions = []
 
-    def load_from_file(self, filename):
-        if os.stat(filename).st_size > 0:
-            with open(filename, 'rb') as chain_file:
-                bc = pickle.load(chain_file)
-                self.blocks = []
-                self.pending_transactions = []
-                for b in bc['chain']:
-                    b = Block.from_dict(b)
-                    self.add_block(b)
-                for t in bc['pending']:
-                    t = Transaction.from_dict(t)
-                    self.add_transaction(t)
-
-    def save_to_file(self, filename):
-        bc = {
-            'pending': [dict(t) for t in self.pending_transactions],
-            'chain': [dict(b) for b in self.blocks]
-        }
-        with open(filename, 'wb') as chain_file:
-            pickle.dump(bc, chain_file)
+        if self._count_blocks() == 0:
+            self.add_block(genesis_block())
 
     def add_block(self, block):
         self.validate_block(block)
         for t in block.transactions[:-1]:
             self.remove_pending_transaction(t.tx_hash)
-        self.blocks.append(block)
-        return
+        if self.mongo:
+            self._blocks.insert_one(dict(block))
+        else:
+            self._blocks.append(block)
 
     def calculate_hash_difficulty(self, index=None):
-        if not self.blocks:
-            index = 0
-        elif index is None:
-            index = self.blocks[-1].index + 1
+        if index is None:
+            index = self._count_blocks()
         if index > 3330 and index <= 3400:
             return self.MINIMUM_HASH_DIFFICULTY
         if index >= 2000:
@@ -90,12 +104,20 @@ class BlockChain(object):
         return balance
 
     def get_block_by_index(self, index):
-        if index > len(self.blocks) - 1:
+        if index >= self._count_blocks():
             return None
-        return self.blocks[index]
+        if self.mongo:
+            if index < 0:
+                index = self._count_blocks() + index
+            block = self._blocks.find_one({'index': index}, {'_id': 0})
+            if not block is None:
+                block = Block.from_dict(block)
+        else:
+            block = self._blocks[index]
+        return block
 
     def get_latest_block(self):
-        return self.blocks[-1]
+        return self.get_block_by_index(-1)
 
     def get_minable_block(self, reward_address):
         transactions = []
@@ -132,24 +154,25 @@ class BlockChain(object):
 
         return Block(new_block_id, transactions, previous_hash, timestamp)
 
-    def get_reward(self, index):  # pylint: disable=W0613
+    def get_reward(self, index):
         if index > 3330 and index <= 3400:
             return self.COINS_PER_BLOCK * 0.3
         return self.COINS_PER_BLOCK
 
     def remove_pending_transaction(self, transaction_hash):
-        for i, t in enumerate(self.pending_transactions):
+        if self.mongo:
+            self._pending_transactions.find_one_and_delete({'tx_hash': transaction_hash})
+            return
+        for i, t in enumerate(self._pending_transactions):
             if t.tx_hash == transaction_hash:
-                self.pending_transactions.pop(i)
-                return True
-        return False
+                self._pending_transactions.pop(i)
 
     def validate_block(self, block):
         # if genesis block, check if block is correct
         if block.index == 0:
-            if self.blocks:
-                raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block.index}')
-            self._check_genesis_block(block)
+            if self._count_blocks() > 0:
+                raise GenesisBlockMismatch(f'Genesis Block Mismatch: {block.index}')
+            check_genesis_block(block)
             return
         # current hash of data is correct and hash satisfies pattern
         self._check_hash_and_hash_pattern(block)
@@ -160,61 +183,55 @@ class BlockChain(object):
         return
 
     def validate_transaction(self, transaction):
-        index = len(self.blocks)
         if transaction in self.pending_transactions:
-            raise InvalidTransactions(index, f'Transaction not valid.  Duplicate transaction detected: {transaction.tx_hash}')
-        if self.find_duplicate_transactions(transaction.tx_hash):
-            raise InvalidTransactions(index, f'Transaction not valid.  Replay transaction detected: {transaction.tx_hash}')
+            raise InvalidTransactions(f'Transaction not valid.  Duplicate transaction detected: {transaction.tx_hash}')
         if not transaction.verify():
-            raise InvalidTransactions(index, f'Transaction not valid.  Invalid transaction signature: {transaction.tx_hash}')
+            raise InvalidTransactions(f'Transaction not valid.  Invalid transaction signature: {transaction.tx_hash}')
         if transaction.amount <= 0 or transaction.fee < 0:
-            raise InvalidTransactions(index, f'Transaction not valid.  Invalid transaction values: {transaction.tx_hash}')
+            raise InvalidTransactions(f'Transaction not valid.  Invalid transaction values: {transaction.tx_hash}')
         if not transaction.verify_hash():
-            raise InvalidTransactions(index, f'Transaction not valid.  Invalid hash: {transaction.tx_hash}')
+            raise InvalidTransactions(f'Transaction not valid.  Invalid hash: {transaction.tx_hash}')
+        if self.find_duplicate_transactions(transaction.tx_hash):
+            raise InvalidTransactions(f'Transaction not valid.  Replay transaction detected: {transaction.tx_hash}')
         balance = self.get_balance(transaction.source)
         if transaction.amount + transaction.fee > balance:
-            raise InvalidTransactions(index, f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
+            raise InvalidTransactions(f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
         balance_pending = self.get_balance_pending(transaction.source)
         if transaction.amount + transaction.fee > balance_pending:
-            raise InvalidTransactions(index, f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
-        return
+            raise InvalidTransactions(f'Transaction not valid.  Insufficient funds: {transaction.tx_hash}')
 
     def add_transaction(self, transaction):
         self.validate_transaction(transaction)
-        self.pending_transactions.append(transaction)
-        return True
-
-    def _check_genesis_block(self, block):
-        if block != self._get_genesis_block():
-            raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block.index}')
-        return
+        if self.mongo:
+            self._pending_transactions.insert_one(dict(transaction))
+        else:
+            self._pending_transactions.append(transaction)
 
     def _check_hash_and_hash_pattern(self, block):
         hash_difficulty = self.calculate_hash_difficulty(block.index)
         if block.current_hash != block.calc_current_hash():
-            raise InvalidHash(block.index, f'Incompatible Block Hash: {block.current_hash}')
+            raise InvalidHash(f'Incompatible Block Hash: {block.current_hash}')
         if block.merkle_root != block.calc_merkle_root():
-            raise BlockchainException(block.index, f'Incompatible Block merkle root: {block.merkle_root}')
+            raise BlockchainException(f'Incompatible Block merkle root: {block.merkle_root}')
         if block.current_hash[:hash_difficulty].count('0') < hash_difficulty:
-            raise InvalidHash(block.index, f'Incompatible Block Hash: {block.current_hash}')
+            raise InvalidHash(f'Incompatible Block Hash: {block.current_hash}')
         return
 
     def _check_index_and_previous_hash(self, block):
         latest_block = self.get_latest_block()
         if latest_block.index != block.index - 1:
-            raise ChainContinuityError(block.index, f'Incompatible block index: {block.index}')
+            raise ChainContinuityError(f'Incompatible block index: {block.index}')
         if latest_block.current_hash != block.previous_hash:
-            raise ChainContinuityError(block.index, f'Incompatible block hash: {block.index} and hash: {block.previous_hash}')
-        return
+            raise ChainContinuityError(f'Incompatible block hash: {block.index} and hash: {block.previous_hash}')
 
     def _check_transactions_and_block_reward(self, block):
         reward_amount = self.get_reward(block.index)
         payers = dict()
         for transaction in block.transactions[:-1]:
             if self.find_duplicate_transactions(transaction.tx_hash):
-                raise InvalidTransactions(block.index, 'Transactions not valid.  Duplicate transaction detected')
+                raise InvalidTransactions('Transactions not valid.  Duplicate transaction detected')
             if not transaction.verify():
-                raise InvalidTransactions(block.index, 'Transactions not valid.  Invalid Transaction signature')
+                raise InvalidTransactions('Transactions not valid.  Invalid Transaction signature')
             if transaction.source in payers:
                 payers[transaction.source] += transaction.amount  + transaction.fee
             else:
@@ -223,30 +240,32 @@ class BlockChain(object):
         for key in payers:
             balance = self.get_balance(key)
             if payers[key] > balance:
-                raise InvalidTransactions(block.index, 'Transactions not valid.  Insufficient funds')
+                raise InvalidTransactions('Transactions not valid.  Insufficient funds')
         # last transaction is block reward
         reward_transaction = block.transactions[-1]
         if reward_transaction.amount != reward_amount or reward_transaction.source != '0':
-            raise InvalidCoinbaseTransaction(block.index, 'Transactions not valid.  Incorrect block reward')
-        return
+            raise InvalidCoinbaseTransaction('Transactions not valid.  Incorrect block reward')
 
-    def _get_genesis_block(self):
-        genesis_transaction_one = Transaction(
-            '0',
-            '032b72046d335b5318a672763338b08b9642225189ab3f0cba777622cfee0fc07b',
-            10,
-            0,
-            0,
-            ''
-        )
-        genesis_transaction_two = Transaction(
-            '0',
-            '02f846677f65911f140a42af8fe7c1e5cbc7d148c44057ce49ee0cd0a72b21df4f',
-            10,
-            0,
-            0,
-            ''
-        )
-        genesis_transactions = [genesis_transaction_one, genesis_transaction_two]
-        genesis_block = Block(0, genesis_transactions, '000000000000000000000000000000000000000000000000000000000000000000', 0, 130898395)
-        return genesis_block
+    def _count_blocks(self):
+        if self.mongo:
+            return self._blocks.count()
+        else:
+            return len(self._blocks)
+
+    def _mblocks(self):
+        return self._blocks.find({}, {'_id': 0}).sort('index')
+
+    def _mpending_transactions(self):
+        return self._pending_transactions.find({}, {'_id': 0})
+
+    @property
+    def blocks(self) -> Iterator[Block]:
+        if self.mongo:
+            return (Block.from_dict(b) for b in self._mblocks())
+        return (b for b in self._blocks)
+
+    @property
+    def pending_transactions(self) -> Iterator[Transaction]:
+        if self.mongo:
+            return (Transaction.from_dict(t) for t in self._mpending_transactions())
+        return (t for t in self.pending_transactions)

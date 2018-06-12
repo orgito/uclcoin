@@ -39,7 +39,7 @@ class Block(object):
             transactions=[Transaction.from_dict(tx) for tx in block_dict['transactions']],
             previous_hash=block_dict['previous_hash'],
             timestamp=block_dict['timestamp'],
-            nonce=block_dict['nonce']
+            nonce=int(block_dict['nonce'])
         )
         block.merkle_root = block_dict['merkle_root']
         block.current_hash = block_dict['current_hash']
@@ -74,6 +74,7 @@ class Block(object):
         block = self.__dict__.copy()
         block['transactions'] = [dict(t) for t in self.transactions]
         block['current_hash'] = self.current_hash
+        block['nonce'] = str(self.nonce)
         for key in block:
             yield (key, block[key])
 

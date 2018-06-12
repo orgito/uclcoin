@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='uclcoin',
-    version='0.2.2',
+    version='0.3.0',
     description='UCLCoin: A naive blockchain/cryptocurrency implementation',
     long_description=open('README.rst', 'r').read(),
     author='Renato Orgito',
@@ -24,7 +24,7 @@ setup(
     ],
     keywords='uclcoin blockchain cryptocurrency',
     packages=['uclcoin'],
-    install_requires=['coincurve'],
+    install_requires=['coincurve', 'pymongo'],
     python_requires='>=3.6',
     project_urls={
         'Bug Reports': 'https://github.com/orgito/uclcoin/issues',
