@@ -71,6 +71,8 @@ class BlockChain(object):
     def calculate_hash_difficulty(self, index=None):
         if index is None:
             index = self._count_blocks()
+        if index > 3892:
+            return self.MINIMUM_HASH_DIFFICULTY
         if index > 3330 and index <= 3400:
             return self.MINIMUM_HASH_DIFFICULTY
         if index >= 2000:
@@ -155,6 +157,8 @@ class BlockChain(object):
         return Block(new_block_id, transactions, previous_hash, timestamp)
 
     def get_reward(self, index):
+        if index > 3892:
+            return self.COINS_PER_BLOCK * 0.2
         if index > 3330 and index <= 3400:
             return self.COINS_PER_BLOCK * 0.3
         return self.COINS_PER_BLOCK
