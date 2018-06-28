@@ -33,6 +33,7 @@ def genesis_block():
     genesis_transactions = [genesis_transaction_one, genesis_transaction_two]
     return Block(0, genesis_transactions, '000000000000000000000000000000000000000000000000000000000000000000', 0, 130898395)
 
+
 def check_genesis_block(block):
     if block != genesis_block():
         raise GenesisBlockMismatch(block.index, f'Genesis Block Mismatch: {block.index}')
@@ -44,7 +45,7 @@ class BlockChain(object):
     MINIMUM_HASH_DIFFICULTY = 7
 
     def __init__(self, mongodb: Database = None):
-        if pymongo_not_installed and not mongodb is None:
+        if pymongo_not_installed and mongodb is not None:
             raise RuntimeError('Cannot use Mongodb for persistnece without pymongo')
 
         if isinstance(mongodb, Database):
@@ -112,7 +113,7 @@ class BlockChain(object):
             if index < 0:
                 index = self._count_blocks() + index
             block = self._blocks.find_one({'index': index}, {'_id': 0})
-            if not block is None:
+            if block is not None:
                 block = Block.from_dict(block)
         else:
             block = self._blocks[index]
@@ -237,9 +238,9 @@ class BlockChain(object):
             if not transaction.verify():
                 raise InvalidTransactions('Transactions not valid.  Invalid Transaction signature')
             if transaction.source in payers:
-                payers[transaction.source] += transaction.amount  + transaction.fee
+                payers[transaction.source] += transaction.amount + transaction.fee
             else:
-                payers[transaction.source] = transaction.amount  + transaction.fee
+                payers[transaction.source] = transaction.amount + transaction.fee
             reward_amount += transaction.fee
         for key in payers:
             balance = self.get_balance(key)

@@ -18,7 +18,7 @@ class Transaction(object):
 
     @staticmethod
     def from_dict(transaction_dict):
-        transaction =  Transaction(
+        transaction = Transaction(
             source=transaction_dict['source'],
             destination=transaction_dict['destination'],
             amount=transaction_dict['amount'],
